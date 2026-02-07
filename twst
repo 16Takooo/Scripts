@@ -193,7 +193,8 @@ local settings = {
     crateDelay = 0.5,
     fuseCreatures = false,
     fuseDelay = 1,
-    preventKick = false
+    preventKick = false,
+    autoReinject = false
 }
 
 -- **Load saved settings**
@@ -859,9 +860,10 @@ MiscTab:Section({Title = "Auto Re-inject"})
 
 MiscTab:Toggle({
     Title = "Auto Re-inject",
-    Value = false,
+    Value = settings.autoReinject,
     Callback = function(v)
         settings.autoReinject = v
+        saveSettings(settings)
         if v then
             local scriptCode = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/16Takooo/Scripts/refs/heads/main/twst"))()'
             local queueTeleport = (getfenv and getfenv() or _G).queue_on_teleport or (syn and syn.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
@@ -927,6 +929,19 @@ if settings.grindMode then
                 task.wait(0.1 + math.random() * 0.05)
             end
             grindLoopActive = false
+        end)
+    end
+end
+
+-- **Auto-execute Auto Re-inject on Script Load**
+if settings.autoReinject then
+    task.wait(1)
+    local scriptCode = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/16Takooo/Scripts/refs/heads/main/twst"))()'
+    local queueTeleport = (getfenv and getfenv() or _G).queue_on_teleport or (syn and syn.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
+    
+    if queueTeleport then
+        pcall(function()
+            queueTeleport(scriptCode)
         end)
     end
 end
