@@ -806,7 +806,7 @@ MiscTab:Toggle({
     Callback = function(v)
         settings.autoReinject = v
         if v then
-            local scriptCode = 'loadstring(game:HttpGet("YOUR_SCRIPT_URL_HERE"))()'
+            local scriptCode = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/16Takooo/Scripts/refs/heads/main/twst"))()'
             local queueTeleport = (getfenv and getfenv() or _G).queue_on_teleport or (syn and syn.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport)
             
             if queueTeleport then
