@@ -34,6 +34,28 @@ local attackEvent = repStorage.Systems.Combat.PlayerAttack
 local petDamageEvent = repStorage.Systems.Combat.PetDamage
 local tweenService = game:GetService("TweenService")
 
+-- **Settings Save/Load System**
+local SETTINGS_FILE = "16Takoo_Settings.json"
+
+local function loadSettings()
+    local success, data = pcall(function()
+        return readfile(SETTINGS_FILE)
+    end)
+    
+    if success and data then
+        local decoded = game:GetService("HttpService"):JSONDecode(data)
+        return decoded or {}
+    end
+    return {}
+end
+
+local function saveSettings(settingsTable)
+    local encoded = game:GetService("HttpService"):JSONEncode(settingsTable)
+    pcall(function()
+        writefile(SETTINGS_FILE, encoded)
+    end)
+end
+
 local function getRemote(path)
     local obj = repStorage
     for _, name in ipairs(path) do
@@ -174,6 +196,14 @@ local settings = {
     preventKick = false
 }
 
+-- **Load saved settings**
+local savedSettings = loadSettings()
+for key, value in pairs(savedSettings) do
+    if settings[key] ~= nil then
+        settings[key] = value
+    end
+end
+
 local connections = {}
 local openingCrate = false
 local fuseCooldown = 0
@@ -182,9 +212,10 @@ MainTab:Section({Title = "Combat System"})
 
 MainTab:Toggle({
     Title = "Auto Hit",
-    Value = false,
+    Value = settings.autoHit,
     Callback = function(v)
         settings.autoHit = v
+        saveSettings(settings)
     end
 })
 
@@ -194,10 +225,11 @@ MainTab:Slider({
     Value = {
         Min = 10,
         Max = 100,
-        Default = 80
+        Default = settings.autoHitRange
     },
     Callback = function(v)
         settings.autoHitRange = v
+        saveSettings(settings)
     end
 })
 
@@ -207,10 +239,11 @@ MainTab:Slider({
     Value = {
         Min = 0.1,
         Max = 1.5,
-        Default = 0.2
+        Default = settings.autoHitSpeed
     },
     Callback = function(v)
         settings.autoHitSpeed = v
+        saveSettings(settings)
     end
 })
 
@@ -218,9 +251,10 @@ MainTab:Section({Title = "Companion System"})
 
 MainTab:Toggle({
     Title = "Companion Strike",
-    Value = false,
+    Value = settings.companionStrike,
     Callback = function(v)
         settings.companionStrike = v
+        saveSettings(settings)
     end
 })
 
@@ -230,10 +264,11 @@ MainTab:Slider({
     Value = {
         Min = 0.1,
         Max = 1.5,
-        Default = 0.2
+        Default = settings.companionSpeed
     },
     Callback = function(v)
         settings.companionSpeed = v
+        saveSettings(settings)
     end
 })
 
@@ -361,17 +396,19 @@ FarmTab:Section({Title = "Dungeon Control"})
 
 FarmTab:Toggle({
     Title = "Auto Start",
-    Value = false,
+    Value = settings.initiateDungeon,
     Callback = function(v)
         settings.initiateDungeon = v
+        saveSettings(settings)
     end
 })
 
 FarmTab:Toggle({
     Title = "Play Again",
-    Value = false,
+    Value = settings.repeatRun,
     Callback = function(v)
         settings.repeatRun = v
+        saveSettings(settings)
     end
 })
 
@@ -409,9 +446,10 @@ FarmTab:Section({Title = "Grinding"})
 
 FarmTab:Toggle({
     Title = "Grind Mode",
-    Value = false,
+    Value = settings.grindMode,
     Callback = function(v)
         settings.grindMode = v
+        saveSettings(settings)
         if v then
             task.spawn(function()
                 while settings.grindMode do
@@ -470,10 +508,11 @@ FarmTab:Slider({
     Value = {
         Min = 50,
         Max = 300,
-        Default = 200
+        Default = settings.moveSpeed
     },
     Callback = function(v)
         settings.moveSpeed = v
+        saveSettings(settings)
     end
 })
 
@@ -483,10 +522,11 @@ FarmTab:Slider({
     Value = {
         Min = -100,
         Max = 100,
-        Default = 50
+        Default = settings.heightOffset
     },
     Callback = function(v)
         settings.heightOffset = v
+        saveSettings(settings)
     end
 })
 
@@ -495,28 +535,31 @@ FarmTab:Section({Title = "Dungeon Setup"})
 FarmTab:Dropdown({
     Title = "Select Dungeon",
     Values = {"AstralDungeon", "CastleDungeon", "CoveDungeon", "DesertDungeon", "ForestDungeon", "JungleDungeon", "MountainDungeon", "CaveDungeon", "MushroomDungeon"},
-    Value = "AstralDungeon",
+    Value = settings.chosenDungeon,
     Callback = function(v)
         settings.chosenDungeon = v
+        saveSettings(settings)
     end
 })
 
 FarmTab:Dropdown({
     Title = "Difficulty Level",
     Values = {"Normal", "Medium", "Hard", "Insane"},
-    Value = "Normal",
+    Value = ({"Normal", "Medium", "Hard", "Insane"})[settings.chosenLevel] or "Normal",
     Callback = function(v)
         local diffMap = {Normal = 1, Medium = 2, Hard = 3, Insane = 4}
         settings.chosenLevel = diffMap[v] or 1
+        saveSettings(settings)
     end
 })
 
 FarmTab:Dropdown({
     Title = "Player Count",
     Values = {"1", "2", "3", "4", "5"},
-    Value = "1",
+    Value = tostring(settings.playerCount),
     Callback = function(v)
         settings.playerCount = tonumber(v) or 1
+        saveSettings(settings)
     end
 })
 
@@ -548,20 +591,22 @@ CreatureTab:Section({Title = "Creature Management"})
 
 CreatureTab:Toggle({
     Title = "Sell Creatures",
-    Value = false,
+    Value = settings.sellCreatures,
     Callback = function(v)
         settings.sellCreatures = v
+        saveSettings(settings)
     end
 })
 
 CreatureTab:Dropdown({
     Title = "Creature Rarities",
     Values = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"},
-    Value = {},
+    Value = settings.creatureRarities,
     Multi = true,
     AllowNone = true,
     Callback = function(v)
         settings.creatureRarities = v
+        saveSettings(settings)
     end
 })
 
@@ -571,10 +616,11 @@ CreatureTab:Slider({
     Value = {
         Min = 0,
         Max = 200,
-        Default = 0
+        Default = settings.maxCreatureLevel
     },
     Callback = function(v)
         settings.maxCreatureLevel = v
+        saveSettings(settings)
     end
 })
 
@@ -628,9 +674,10 @@ CreatureTab:Section({Title = "Crate System"})
 
 CreatureTab:Toggle({
     Title = "Unlock Crates",
-    Value = false,
+    Value = settings.unlockCrates,
     Callback = function(v)
         settings.unlockCrates = v
+        saveSettings(settings)
     end
 })
 
@@ -640,10 +687,11 @@ CreatureTab:Slider({
     Value = {
         Min = 0.2,
         Max = 15,
-        Default = 0.5
+        Default = settings.crateDelay
     },
     Callback = function(v)
         settings.crateDelay = v
+        saveSettings(settings)
     end
 })
 
@@ -695,9 +743,10 @@ CreatureTab:Section({Title = "Fusion System"})
 
 CreatureTab:Toggle({
     Title = "Fuse Creatures",
-    Value = false,
+    Value = settings.fuseCreatures,
     Callback = function(v)
         settings.fuseCreatures = v
+        saveSettings(settings)
     end
 })
 
@@ -707,10 +756,11 @@ CreatureTab:Slider({
     Value = {
         Min = 0.2,
         Max = 15,
-        Default = 1
+        Default = settings.fuseDelay
     },
     Callback = function(v)
         settings.fuseDelay = v
+        saveSettings(settings)
     end
 })
 
@@ -780,9 +830,10 @@ MiscTab:Section({Title = "AFK Protection"})
 
 MiscTab:Toggle({
     Title = "Anti AFK",
-    Value = false,
+    Value = settings.preventKick,
     Callback = function(v)
         settings.preventKick = v
+        saveSettings(settings)
     end
 })
 
