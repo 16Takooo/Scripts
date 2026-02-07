@@ -207,6 +207,7 @@ end
 local connections = {}
 local openingCrate = false
 local fuseCooldown = 0
+local grindLoopActive = false
 
 MainTab:Section({Title = "Combat System"})
 
@@ -450,9 +451,11 @@ FarmTab:Toggle({
     Callback = function(v)
         settings.grindMode = v
         saveSettings(settings)
-        if v then
+        
+        if v and not grindLoopActive then
+            grindLoopActive = true
             task.spawn(function()
-                while settings.grindMode do
+                while settings.grindMode and grindLoopActive do
                     local target = getClosestMob()
                     local char = plr.Character
                     if not char then 
@@ -497,7 +500,10 @@ FarmTab:Toggle({
                     
                     task.wait(0.1 + math.random() * 0.05)
                 end
+                grindLoopActive = false
             end)
+        elseif not v then
+            grindLoopActive = false
         end
     end
 })
@@ -868,3 +874,59 @@ MiscTab:Toggle({
         end
     end
 })
+
+-- **Auto-start Grind Mode on Script Load**
+if settings.grindMode then
+    task.wait(2) -- Wait for game to load
+    if not grindLoopActive then
+        grindLoopActive = true
+        task.spawn(function()
+            while settings.grindMode and grindLoopActive do
+                local target = getClosestMob()
+                local char = plr.Character
+                if not char then 
+                    task.wait(0.1)
+                    continue 
+                end
+                
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                
+                if target and hrp and hum and hum.Health > 0 then
+                    local hp = target:GetAttribute("HP")
+                    if type(hp) ~= "number" or hp > 0 then
+                        local success, pivot = pcall(function() return target:GetPivot() end)
+                        if success and pivot then
+                            local dist = (pivot.Position - hrp.Position).Magnitude
+                            if dist <= 500 then
+                                local yOffset = settings.heightOffset + math.random(-6, 6)
+                                local targetPos = pivot.Position + Vector3.new(0, yOffset, 0)
+                                local speed = math.max(50, settings.moveSpeed)
+                                local duration = math.max(0.05, dist / speed)
+                                
+                                local tween = tweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
+                                
+                                local velConnection = rs.Heartbeat:Connect(function()
+                                    if hrp and hrp.Parent then
+                                        hrp.AssemblyLinearVelocity = Vector3.zero
+                                        hrp.AssemblyAngularVelocity = Vector3.zero
+                                    end
+                                end)
+                                
+                                tween:Play()
+                                tween.Completed:Wait()
+                                
+                                if velConnection then
+                                    velConnection:Disconnect()
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                task.wait(0.1 + math.random() * 0.05)
+            end
+            grindLoopActive = false
+        end)
+    end
+end
