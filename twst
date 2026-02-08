@@ -933,7 +933,6 @@ if settings.grindMode then
     end
 end
 
--- **Auto-execute Auto Re-inject on Script Load**
 if settings.autoReinject then
     task.wait(1)
     local scriptCode = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/16Takooo/Scripts/refs/heads/main/twst"))()'
@@ -946,18 +945,12 @@ if settings.autoReinject then
     end
 end
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- Locate the systems folder
 local systems = ReplicatedStorage:FindFirstChild("Systems")
-
 if systems then
-    -- Find and destroy the AntiCheat object
     local antiCheat = systems:FindFirstChild("AntiCheat")
     if antiCheat then
         antiCheat:Destroy()
     end
-
-    -- Find and destroy the AntiSpam object
     local antiSpam = systems:FindFirstChild("AntiSpam")
     if antiSpam then
         antiSpam:Destroy()
