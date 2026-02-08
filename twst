@@ -945,3 +945,22 @@ if settings.autoReinject then
         end)
     end
 end
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Locate the systems folder
+local systems = ReplicatedStorage:FindFirstChild("Systems")
+
+if systems then
+    -- Find and destroy the AntiCheat object
+    local antiCheat = systems:FindFirstChild("AntiCheat")
+    if antiCheat then
+        antiCheat:Destroy()
+    end
+
+    -- Find and destroy the AntiSpam object
+    local antiSpam = systems:FindFirstChild("AntiSpam")
+    if antiSpam then
+        antiSpam:Destroy()
+    end
+end
+
