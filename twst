@@ -21,6 +21,11 @@ local CreatureTab = Window:Tab({
     Icon = "bird"
 })
 
+local SellTab = Window:Tab({
+    Title = "Selling",
+    Icon = "coins"
+})
+
 local MiscTab = Window:Tab({
     Title = "Misc",
     Icon = "settings"
@@ -34,7 +39,6 @@ local attackEvent = repStorage.Systems.Combat.PlayerAttack
 local petDamageEvent = repStorage.Systems.Combat.PetDamage
 local tweenService = game:GetService("TweenService")
 
--- **Settings Save/Load System**
 local SETTINGS_FILE = "16Takoo_Settings.json"
 
 local function loadSettings()
@@ -172,6 +176,24 @@ local function isFavorite(pet)
     return fav
 end
 
+local function isGemOrBooster(item)
+    if not (item and item.Name) then
+        return false
+    end
+    
+    local itemName = string.lower(item.Name)
+    
+    if itemName == "uncutemerald" or itemName == "uncutruby" or itemName == "uncutsapphire" then
+        return true
+    end
+    
+    if string.find(itemName, "gem", 1, true) or string.find(itemName, "booster", 1, true) then
+        return true
+    end
+    
+    return false
+end
+
 local settings = {
     autoHit = false,
     autoHitRange = 80,
@@ -186,6 +208,9 @@ local settings = {
     chosenDungeon = "AstralDungeon",
     chosenLevel = 1,
     playerCount = 1,
+    sellItems = false,
+    itemRarities = {},
+    maxItemLevel = 0,
     sellCreatures = false,
     creatureRarities = {},
     maxCreatureLevel = 0,
@@ -197,7 +222,6 @@ local settings = {
     autoReinject = false
 }
 
--- **Load saved settings**
 local savedSettings = loadSettings()
 for key, value in pairs(savedSettings) do
     if settings[key] ~= nil then
@@ -594,6 +618,89 @@ FarmTab:Button({
     end
 })
 
+SellTab:Section({Title = "Item Selling"})
+
+SellTab:Toggle({
+    Title = "Sell Items",
+    Value = settings.sellItems,
+    Callback = function(v)
+        settings.sellItems = v
+        saveSettings(settings)
+    end
+})
+
+SellTab:Dropdown({
+    Title = "Item Rarities",
+    Values = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"},
+    Value = settings.itemRarities,
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v)
+        settings.itemRarities = v
+        saveSettings(settings)
+    end
+})
+
+SellTab:Slider({
+    Title = "Max Item Level",
+    Step = 1,
+    Value = {
+        Min = 0,
+        Max = 200,
+        Default = settings.maxItemLevel
+    },
+    Callback = function(v)
+        settings.maxItemLevel = v
+        saveSettings(settings)
+    end
+})
+
+local sellItemsAccum = 0
+connections.sellItems = rs.Heartbeat:Connect(function(dt)
+    if not settings.sellItems then return end
+    sellItemsAccum = sellItemsAccum + dt
+    if sellItemsAccum >= 0.1 then
+        sellItemsAccum = 0
+        
+        local playerGui = plr:FindFirstChild("PlayerGui")
+        if not playerGui then return end
+        local profile = playerGui:FindFirstChild("Profile")
+        if not profile then return end
+        local inventory = profile:FindFirstChild("Inventory")
+        if not inventory then return end
+        
+        local maxLevel = settings.maxItemLevel
+        local toSell = {}
+        
+        local rarityMap = {Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythic = 6}
+        local sellRarities = {}
+        for _, rarityName in ipairs(settings.itemRarities) do
+            sellRarities[rarityMap[rarityName]] = true
+        end
+        
+        for _, item in ipairs(inventory:GetChildren()) do
+            if not isGemOrBooster(item) then
+                local rarity = getRarity(item)
+                if rarity and sellRarities[rarity] then
+                    local level = getLevel(item) or 0
+                    if maxLevel == 0 or level <= maxLevel then
+                        table.insert(toSell, item)
+                    end
+                end
+            end
+        end
+        
+        if #toSell > 0 then
+            local remote = getRemote({"Systems", "ItemSelling", "SellItem"})
+            if remote and remote:IsA("RemoteEvent") then
+                pcall(function()
+                    remote:FireServer(toSell, {})
+                end)
+            end
+        end
+    end
+end)
+
 CreatureTab:Section({Title = "Creature Management"})
 
 CreatureTab:Toggle({
@@ -877,9 +984,8 @@ MiscTab:Toggle({
     end
 })
 
--- **Auto-start Grind Mode on Script Load**
 if settings.grindMode then
-    task.wait(2) -- Wait for game to load
+    task.wait(2)
     if not grindLoopActive then
         grindLoopActive = true
         task.spawn(function()
@@ -944,16 +1050,4 @@ if settings.autoReinject then
         end)
     end
 end
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local systems = ReplicatedStorage:FindFirstChild("Systems")
-if systems then
-    local antiCheat = systems:FindFirstChild("AntiCheat")
-    if antiCheat then
-        antiCheat:Destroy()
-    end
-    local antiSpam = systems:FindFirstChild("AntiSpam")
-    if antiSpam then
-        antiSpam:Destroy()
-    end
-end
-
+Window:SetToggleKey(Enum.KeyCode.H)
