@@ -250,7 +250,7 @@ MainTab:Slider({
     Step = 1,
     Value = {
         Min = 10,
-        Max = 100,
+        Max = 10000,
         Default = settings.autoHitRange
     },
     Callback = function(v)
